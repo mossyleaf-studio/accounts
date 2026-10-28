@@ -26,6 +26,8 @@ x-authentik: &authentik
     MOSSYDEW_CLIENT_SECRET: ${MOSSYDEW_CLIENT_SECRET:-mossydew-local-secret}
     MOSSYTRUNK_CLIENT_SECRET: ${MOSSYTRUNK_CLIENT_SECRET:-mossytrunk-local-secret}
     MOSSYLEAF_STUDIO_CLIENT_SECRET: ${MOSSYLEAF_STUDIO_CLIENT_SECRET:-mossyleaf-studio-local-secret}
+    MUHMEAL_CLIENT_SECRET: ${MUHMEAL_CLIENT_SECRET:-muhmeal-local-secret}
+    MUHMEAL_URL: ${MUHMEAL_URL:-http://localhost:8095}
   volumes:
     - ./data:/data
 

@@ -42,6 +42,8 @@ Fill `.env`:
 | `MOSSYDEW_CLIENT_SECRET` | `openssl rand -hex 32`, same value in MossyDew's `OIDC_CLIENT_SECRET` |
 | `MOSSYTRUNK_CLIENT_SECRET` | `openssl rand -hex 32`, same value in MossyTrunk's `OIDC_CLIENT_SECRET` |
 | `MOSSYLEAF_STUDIO_CLIENT_SECRET` | `openssl rand -hex 32`, same value in mossyleaf.studio's `OIDC_CLIENT_SECRET` |
+| `MUHMEAL_CLIENT_SECRET` | `openssl rand -hex 32`, same value in muhmeal's `OIDC_CLIENT_SECRET` |
+| `MUHMEAL_URL` | The app's public origin, without a trailing slash (its redirect URIs are built from it) |
 
 Never change `AUTHENTIK_SECRET_KEY` or `PG_PASS` after the first start: sessions, tokens and the database depend on them. Keep a copy of `.env` with the backups. Changing a client secret means updating the app at the same time.
 

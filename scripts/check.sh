@@ -4,7 +4,7 @@
 set -eu
 
 BASE="http://localhost:${AUTHENTIK_PORT:-9000}"
-APPS="mossydew mossytrunk mossyleaf-studio"
+APPS="mossydew mossytrunk mossyleaf-studio muhmeal"
 ATTEMPTS="${CHECK_ATTEMPTS:-60}"
 
 fail() {
