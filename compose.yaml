@@ -28,6 +28,8 @@ x-authentik: &authentik
     MOSSYLEAF_STUDIO_CLIENT_SECRET: ${MOSSYLEAF_STUDIO_CLIENT_SECRET:-mossyleaf-studio-local-secret}
     MUHMEAL_CLIENT_SECRET: ${MUHMEAL_CLIENT_SECRET:-muhmeal-local-secret}
     MUHMEAL_URL: ${MUHMEAL_URL:-http://localhost:8095}
+    INJUST_CLIENT_SECRET: ${INJUST_CLIENT_SECRET:-injust-local-secret}
+    INJUST_URL: ${INJUST_URL:-http://localhost:8098}
   volumes:
     - ./data:/data
 

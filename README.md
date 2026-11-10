@@ -35,13 +35,13 @@ Local client secrets: `mossydew-local-secret` and `mossytrunk-local-secret` (ove
 
 ## Contract with the apps
 
-| | MossyDew | MossyTrunk | muhmeal |
-|---|---|---|---|
-| `client_id` | `mossydew` | `mossytrunk` | `muhmeal` |
-| `client_secret` | `MOSSYDEW_CLIENT_SECRET` | `MOSSYTRUNK_CLIENT_SECRET` | `MUHMEAL_CLIENT_SECRET` |
-| Redirect URIs (strict) | `https://mossydew.mossyleaf.studio/login/check`, `http://localhost:8090/login/check` | `https://mossytrunk.mossyleaf.studio/login/check`, `http://localhost:8080/login/check` | `$MUHMEAL_URL/login/check` |
-| Post-logout redirect URIs (strict) | `https://mossydew.mossyleaf.studio/`, `http://localhost:8090/` | `https://mossytrunk.mossyleaf.studio/`, `http://localhost:8080/` | `$MUHMEAL_URL/` |
-| Group allowed to sign in | `mossydew` | `mossytrunk` | `muhmeal` |
+| | MossyDew | MossyTrunk | muhmeal | injust |
+|---|---|---|---|---|
+| `client_id` | `mossydew` | `mossytrunk` | `muhmeal` | `injust` |
+| `client_secret` | `MOSSYDEW_CLIENT_SECRET` | `MOSSYTRUNK_CLIENT_SECRET` | `MUHMEAL_CLIENT_SECRET` | `INJUST_CLIENT_SECRET` |
+| Redirect URIs (strict) | `https://mossydew.mossyleaf.studio/login/check`, `http://localhost:8090/login/check` | `https://mossytrunk.mossyleaf.studio/login/check`, `http://localhost:8080/login/check` | `$MUHMEAL_URL/login/check` | `$INJUST_URL/login/check` |
+| Post-logout redirect URIs (strict) | `https://mossydew.mossyleaf.studio/`, `http://localhost:8090/` | `https://mossytrunk.mossyleaf.studio/`, `http://localhost:8080/` | `$MUHMEAL_URL/` | `$INJUST_URL/` |
+| Group allowed to sign in | `mossydew` | `mossytrunk` | `muhmeal` | `injust` |
 
 Endpoints (`<slug>` = `mossydew` or `mossytrunk`; locally `http://localhost:9000` instead of the host):
 
