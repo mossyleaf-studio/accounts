@@ -121,7 +121,7 @@ The sign-in, recovery and password-change flows run in Authentik's compatibility
 
 ## Server
 
-See [deploy/README.md](deploy/README.md): first install, `.env`, nginx block and certificate, first admin, invitations, new apps, backups, updates. Push to `main`, wait for CI to publish the image, then `make deploy` runs that commit's tag on the server. `make deploy-files` / `make deploy` reach the server through `$(DEPLOY_HOST):$(DEPLOY_DIR)`, set in a root `.env` (gitignored):
+See [deploy/README.md](deploy/README.md): first install, `.env`, Caddy block, first admin, invitations, new apps, backups, updates. Push to `main`, wait for CI to publish the image, then `make deploy` runs that commit's tag on the server. `make deploy-files` / `make deploy` reach the server through `$(DEPLOY_HOST):$(DEPLOY_DIR)`, set in a root `.env` (gitignored):
 
 ```bash
 DEPLOY_HOST=user@server

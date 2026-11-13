@@ -2,7 +2,7 @@
 
 This folder is all a server needs: `compose.yaml` runs the image `docker.io/injust/mossyleaf-accounts` (Authentik server + worker, with the blueprints, email templates and branding baked in) and PostgreSQL 18. Everything Authentik needs (groups, OIDC providers and applications, flows, brand, emails) is declared in the blueprints and applied on start. No source checkout on the server.
 
-It runs in its own directory on the server (`DEPLOY_DIR`), behind a shared nginx container, at `https://accounts.mossyleaf.studio`, `https://accounts.injustmusic.com` and `https://accounts.duprat.cloud` (one brand per context, see the [README](../README.md#contexts)).
+It runs in its own directory on the server (`DEPLOY_DIR`), behind the shared Caddy edge proxy, at `https://accounts.mossyleaf.studio`, `https://accounts.injustmusic.com` and `https://accounts.duprat.cloud` (one brand per context, see the [README](../README.md#contexts)).
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ Fill `.env`:
 | Variable | Value |
 |---|---|
 | `IMAGE` / `TAG` | Image to run; `make deploy` sets `TAG` to the commit it deploys |
-| `PROXY_NETWORK` | External Docker network of the nginx reverse proxy (`docker network ls`) |
+| `PROXY_NETWORK` | External Docker network of the reverse proxy (`web` on duprat.cloud) |
 | `PG_PASS` | `openssl rand -base64 36 \| tr -d '\n'` |
 | `AUTHENTIK_SECRET_KEY` | `openssl rand -base64 60 \| tr -d '\n'` |
 | `AUTHENTIK_WEB__BASE_URL` | `https://accounts.mossyleaf.studio` |
@@ -70,52 +70,17 @@ Both `custom/mossyleaf-*.yaml` lines must say `successful`. `curl -s https://acc
 
 ## Reverse proxy
 
-The server container joins the external Docker network named by `PROXY_NETWORK` in `.env` (the one the nginx container is on) with the alias `mossyleaf-accounts` and publishes no port. Authentik needs `Host`, the `X-Forwarded-*` headers and WebSocket upgrades. The nginx container's address is in Authentik's default trusted proxy ranges (private networks), so the forwarded headers are honoured.
+The server container joins the external Docker network named by `PROXY_NETWORK` in `.env` (`web` on duprat.cloud, the network Caddy is on) with the alias `mossyleaf-accounts` and publishes no port. Authentik needs `Host`, the `X-Forwarded-*` headers and WebSocket upgrades; Caddy's `reverse_proxy` sends all of them. Caddy's address is in Authentik's default trusted proxy ranges (private networks), so the forwarded headers are honoured.
 
-1. Expand the shared certificate with the new names. List the current names, then rerun certbot the way it is usually run on the server with every existing `-d` plus the new ones:
+The site block lives in the `duprat-cloud` repo (`proxy/conf/Caddyfile`); Caddy fetches and renews the certificates for every name itself:
 
-   ```bash
-   certbot certificates
-   certbot certonly --expand --cert-name <cert name> -d <every existing name> -d accounts.mossyleaf.studio -d accounts.injustmusic.com -d accounts.duprat.cloud
-   ```
+```caddyfile
+accounts.mossyleaf.studio, accounts.injustmusic.com, accounts.duprat.cloud {
+	import app mossyleaf-accounts:9000 20MB
+}
+```
 
-2. Add to the nginx configuration (copy the `listen`/`ssl_*` lines of the `mossydew.mossyleaf.studio` block if they differ, including its port 80 redirect):
-
-   ```nginx
-   map $http_upgrade $mossyleaf_accounts_connection {
-       default upgrade;
-       ''      '';
-   }
-
-   server {
-       listen 443 ssl;
-       http2 on;
-       server_name accounts.mossyleaf.studio accounts.injustmusic.com accounts.duprat.cloud;
-
-       ssl_certificate /etc/nginx/ssl/live/<cert name>/fullchain.pem;
-       ssl_certificate_key /etc/nginx/ssl/live/<cert name>/privkey.pem;
-
-       client_max_body_size 20m;
-
-       location / {
-           proxy_pass http://mossyleaf-accounts:9000;
-           proxy_http_version 1.1;
-           proxy_set_header Host $host;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_set_header X-Forwarded-Host $host;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection $mossyleaf_accounts_connection;
-       }
-   }
-   ```
-
-3. Check and reload:
-
-   ```bash
-   docker exec <nginx container> nginx -t
-   docker exec <nginx container> nginx -s reload
-   ```
+Apply it with `make deploy-proxy` in `duprat-cloud`. The DNS records of the new names must point at the server first, or the certificate request fails (Caddy retries).
 
 ## First admin
 
