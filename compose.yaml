@@ -30,6 +30,10 @@ x-authentik: &authentik
     MUHMEAL_URL: ${MUHMEAL_URL:-http://localhost:8095}
     INJUST_CLIENT_SECRET: ${INJUST_CLIENT_SECRET:-injust-local-secret}
     INJUST_URL: ${INJUST_URL:-http://localhost:8098}
+    # One brand per context; browsers resolve *.localhost to this machine.
+    MOSSYLEAF_ACCOUNTS_DOMAIN: localhost:${AUTHENTIK_PORT:-9000}
+    INJUST_ACCOUNTS_DOMAIN: injust.localhost:${AUTHENTIK_PORT:-9000}
+    PERSONAL_ACCOUNTS_DOMAIN: personal.localhost:${AUTHENTIK_PORT:-9000}
   volumes:
     - ./data:/data
 

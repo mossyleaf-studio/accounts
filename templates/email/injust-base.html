@@ -1,0 +1,33 @@
+{% load i18n %}{% get_current_language as language %}<!DOCTYPE html>
+<html lang="{{ language|slice:':2' }}">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Injust</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #e9edf0; color: #2b2d2a; font-family: Archivo, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.55;">
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #e9edf0;">
+      <tr>
+        <td align="center" style="padding: 40px 16px;">
+          <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 480px;">
+            <tr>
+              <td style="padding: 0 4px 20px; font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-size: 26px; letter-spacing: 1px; color: #0b0d10;">
+                <span style="display: inline-block; width: 8px; height: 22px; margin-right: 8px; vertical-align: -2px; background-color: #d4202a;"></span>INJUST
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #ffffff; border: 1px solid #e3e4e0; border-radius: 0; padding: 32px 28px;">
+                {% block content %}{% endblock %}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 4px 0; font-size: 12px; color: #6b6e68;">
+                {% block footer %}{% endblock %}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

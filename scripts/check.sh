@@ -5,6 +5,9 @@ set -eu
 
 BASE="http://localhost:${AUTHENTIK_PORT:-9000}"
 APPS="mossydew mossytrunk mossyleaf-studio muhmeal injust"
+# One brand per context, reached by Host (local domains from compose.yaml).
+PORT="${AUTHENTIK_PORT:-9000}"
+BRANDS="localhost:$PORT=mossyleaf injust.localhost:$PORT=Injust personal.localhost:$PORT=duprat.cloud"
 ATTEMPTS="${CHECK_ATTEMPTS:-60}"
 
 fail() {
@@ -52,5 +55,20 @@ echo "  sign-in page: compatibility mode"
 curl -sf "$BASE/static/dist/custom/branding.css" | grep -q -- '--ml-paper' || fail "branding.css not served"
 curl -sf -o /dev/null "$BASE/static/dist/custom/logo.svg" || fail "logo.svg not served"
 echo "  brand assets served"
+
+for brand in $BRANDS; do
+  host=${brand%%=*}
+  title=${brand#*=}
+  curl -sf -H "Host: $host" "$BASE/if/flow/mossyleaf-authentication/" | grep -q "<title>$title</title>" || fail "$host does not serve the $title brand"
+  # Forgot password must stop at the email step on every brand, never jump to the new password.
+  jar=$(mktemp)
+  curl -sf -c "$jar" -b "$jar" -H "Host: $host" "$BASE/api/v3/flows/executor/mossyleaf-recovery/?query=" >/dev/null
+  step=$(curl -sfL -c "$jar" -b "$jar" -H "Host: $host" -H 'Content-Type: application/json' \
+    -d '{"component":"ak-stage-identification","uid_field":"nobody@example.com"}' \
+    "$BASE/api/v3/flows/executor/mossyleaf-recovery/?query=" | sed -n 's/.*"component": *"\([^"]*\)".*/\1/p')
+  rm -f "$jar"
+  [ "$step" = "ak-stage-email" ] || fail "$host recovery goes to '$step' instead of the email step"
+  echo "  $host: $title brand, recovery by email"
+done
 
 echo "OK"

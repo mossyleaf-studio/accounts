@@ -2,13 +2,14 @@
 
 This folder is all a server needs: `compose.yaml` runs the image `docker.io/injust/mossyleaf-accounts` (Authentik server + worker, with the blueprints, email templates and branding baked in) and PostgreSQL 18. Everything Authentik needs (groups, OIDC providers and applications, flows, brand, emails) is declared in the blueprints and applied on start. No source checkout on the server.
 
-It runs in its own directory on the server (`DEPLOY_DIR`), behind a shared nginx container, at `https://accounts.mossyleaf.studio`.
+It runs in its own directory on the server (`DEPLOY_DIR`), behind a shared nginx container, at `https://accounts.mossyleaf.studio`, `https://accounts.injustmusic.com` and `https://accounts.duprat.cloud` (one brand per context, see the [README](../README.md#contexts)).
 
 ## Prerequisites
 
 - Docker Engine with the Compose plugin (`docker compose version`). Authentik takes about 1 GB of RAM (server + worker).
 - An SMTP account for invitation and password emails.
-- DNS for `accounts.mossyleaf.studio` pointing at the server (already covered by `*.mossyleaf.studio`).
+- DNS for `accounts.mossyleaf.studio`, `accounts.injustmusic.com` and `accounts.duprat.cloud` pointing at the server.
+- An SMTP account allowed to send from `accounts@injustmusic.com` and `accounts@duprat.cloud` too (SPF/DKIM of those domains): the injust and personal emails use them as sender.
 
 ## First install
 
@@ -46,6 +47,8 @@ Fill `.env`:
 | `MUHMEAL_URL` | The app's public origin, without a trailing slash (its redirect URIs are built from it) |
 | `INJUST_CLIENT_SECRET` | `openssl rand -hex 32`, same value in injust's `OIDC_CLIENT_SECRET` |
 | `INJUST_URL` | The app's public origin, without a trailing slash (its redirect URIs are built from it) |
+| `INJUST_ACCOUNTS_DOMAIN` / `PERSONAL_ACCOUNTS_DOMAIN` | Sign-in host of the injust and personal contexts (default `accounts.injustmusic.com` / `accounts.duprat.cloud`) |
+| `INJUST_EMAIL_FROM` / `PERSONAL_EMAIL_FROM` | Sender address of their emails, a bare address (default `accounts@injustmusic.com` / `accounts@duprat.cloud`); they reuse the `AUTHENTIK_EMAIL__*` SMTP settings |
 
 Never change `AUTHENTIK_SECRET_KEY` or `PG_PASS` after the first start: sessions, tokens and the database depend on them. Keep a copy of `.env` with the backups. Changing a client secret means updating the app at the same time.
 
@@ -69,11 +72,11 @@ Both `custom/mossyleaf-*.yaml` lines must say `successful`. `curl -s https://acc
 
 The server container joins the external Docker network named by `PROXY_NETWORK` in `.env` (the one the nginx container is on) with the alias `mossyleaf-accounts` and publishes no port. Authentik needs `Host`, the `X-Forwarded-*` headers and WebSocket upgrades. The nginx container's address is in Authentik's default trusted proxy ranges (private networks), so the forwarded headers are honoured.
 
-1. Expand the shared certificate with the new name. List the current names, then rerun certbot the way it is usually run on the server with every existing `-d` plus the new one:
+1. Expand the shared certificate with the new names. List the current names, then rerun certbot the way it is usually run on the server with every existing `-d` plus the new ones:
 
    ```bash
    certbot certificates
-   certbot certonly --expand --cert-name <cert name> -d <every existing name> -d accounts.mossyleaf.studio
+   certbot certonly --expand --cert-name <cert name> -d <every existing name> -d accounts.mossyleaf.studio -d accounts.injustmusic.com -d accounts.duprat.cloud
    ```
 
 2. Add to the nginx configuration (copy the `listen`/`ssl_*` lines of the `mossydew.mossyleaf.studio` block if they differ, including its port 80 redirect):
@@ -87,7 +90,7 @@ The server container joins the external Docker network named by `PROXY_NETWORK` 
    server {
        listen 443 ssl;
        http2 on;
-       server_name accounts.mossyleaf.studio;
+       server_name accounts.mossyleaf.studio accounts.injustmusic.com accounts.duprat.cloud;
 
        ssl_certificate /etc/nginx/ssl/live/<cert name>/fullchain.pem;
        ssl_certificate_key /etc/nginx/ssl/live/<cert name>/privkey.pem;
@@ -132,19 +135,23 @@ From a dev machine:
 
 ```bash
 make invite REMOTE=1 EMAIL=ada@example.com NAME="Ada Lovelace" GROUPS="mossydew mossytrunk" WORKSPACE="Atelier Mousse"
+make invite REMOTE=1 CONTEXT=injust EMAIL=ada@example.com NAME="Ada Lovelace"     # GROUPS defaults to injust
+make invite REMOTE=1 CONTEXT=personal EMAIL=ada@example.com NAME="Ada Lovelace"   # GROUPS defaults to muhmeal
 ```
+
+`CONTEXT` (`mossyleaf` by default, `injust` or `personal`) picks the brand: the link points at that context's domain and the email has its look and sender. `GROUPS` defaults to the context's apps.
 
 `TIMEZONE` (default `Europe/Paris`, sent as the `zoneinfo` claim) and `LOCALE` (default `fr`, language of the email and of the account pages) are optional. `WORKSPACE` is the exact name of the MossyTrunk workspace the person joins on their first MossyTrunk sign-in (sent as the `mossytrunk_workspace` claim); without it they get a workspace of their own. It is only read on that first sign-in. Running it again for an existing email only adds the groups (and sets `WORKSPACE` when given) and sends a fresh link (the previous one stops working).
 
-On the server (the script is in the image): `docker compose exec -T -e INVITE_EMAIL=ada@example.com -e INVITE_NAME="Ada Lovelace" -e INVITE_GROUPS="mossydew" -e INVITE_HOST=accounts.mossyleaf.studio -e INVITE_SECURE=1 worker sh -c 'ak shell < /mossyleaf/invite.py'`
+On the server (the script is in the image): `docker compose exec -T -e INVITE_EMAIL=ada@example.com -e INVITE_NAME="Ada Lovelace" -e INVITE_GROUPS="mossydew" -e INVITE_CONTEXT=mossyleaf -e INVITE_SECURE=1 worker sh -c 'ak shell < /mossyleaf/invite.py'`
 
-From the admin interface: **Directory › Users › Create** (username = email, name, email), open the user, **Groups › Add to existing group**, then **Recovery › Email recovery link** and pick the `mossyleaf-invitation-email` stage.
+From the admin interface: **Directory › Users › Create** (username = email, name, email), open the user, **Groups › Add to existing group**, then **Recovery › Email recovery link** and pick the `<context>-invitation-email` stage (`mossyleaf`, `injust` or `personal`). The link uses the host the admin interface is open on, so open it on that context's domain.
 
 Removing access to an app = removing the user from its group. **Deactivate** blocks every app at once.
 
 ## Adding a new app
 
-In `blueprints/mossyleaf-apps.yaml`, copy the MossyDew block (group, provider, application, binding) and change the slug, name, redirect URIs and the `!Env` secret name. Add the secret to the server `.env` and to `.env.dist`, push to `main`, then `make deploy` once CI has published the image. The app gets its discovery document at `https://accounts.mossyleaf.studio/application/o/<slug>/.well-known/openid-configuration`.
+In `blueprints/mossyleaf-apps.yaml`, copy the MossyDew block (group, provider, application, binding) and change the slug, name, redirect URIs and the `!Env` secret name. The app then signs in through whichever context domain it points at (its issuer follows the host). Add the secret to the server `.env` and to `.env.dist`, push to `main`, then `make deploy` once CI has published the image. The app gets its discovery document at `https://accounts.mossyleaf.studio/application/o/<slug>/.well-known/openid-configuration`.
 
 ## Backup / restore
 

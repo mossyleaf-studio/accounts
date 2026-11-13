@@ -3,10 +3,10 @@
 {% block content %}{% get_current_language as language %}{% if language|slice:':2' == 'fr' %}
 <h1 style="margin: 0 0 16px; font-family: 'Patua One', Rockwell, Georgia, serif; font-weight: 400; font-size: 22px; color: #3d5c28;">Bienvenue, {{ user.name }}</h1>
 <p style="margin: 0;">Un compte mossyleaf vient d'être créé pour vous. Il vous connecte à MossyDew, MossyTrunk et aux prochaines applications mossyleaf. Choisissez votre mot de passe pour l'activer.</p>
-{% include "email/mossyleaf-button.html" with label="Choisir mon mot de passe" %}
+{% include "email/button.html" with label="Choisir mon mot de passe" %}
 {% else %}
 <h1 style="margin: 0 0 16px; font-family: 'Patua One', Rockwell, Georgia, serif; font-weight: 400; font-size: 22px; color: #3d5c28;">Welcome, {{ user.name }}</h1>
 <p style="margin: 0;">A mossyleaf account has just been created for you. It signs you in to MossyDew, MossyTrunk and the mossyleaf apps to come. Choose your password to activate it.</p>
-{% include "email/mossyleaf-button.html" with label="Choose my password" %}
+{% include "email/button.html" with label="Choose my password" %}
 {% endif %}{% endblock %}
 {% block footer %}{% get_current_language as language %}{% if language|slice:':2' == 'fr' %}Ce lien est valable {{ expires|timeuntil }}. Vous n'attendiez pas ce message ? Ignorez-le.{% else %}This link is valid for {{ expires|timeuntil }}. Not expecting this email? Just ignore it.{% endif %}{% endblock %}

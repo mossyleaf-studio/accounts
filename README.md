@@ -1,6 +1,6 @@
 # mossyleaf accounts
 
-Single sign-on for the mossyleaf apps at **https://accounts.mossyleaf.studio**: a self-hosted [Authentik](https://goauthentik.io) **2026.8.3** where MossyDew and MossyTrunk are OpenID Connect clients. One account per person, one group per app, no public sign-up.
+Single sign-on for three contexts, each on its own domain: the mossyleaf apps at **https://accounts.mossyleaf.studio**, Injust at **https://accounts.injustmusic.com** and the personal apps at **https://accounts.duprat.cloud**. A self-hosted [Authentik](https://goauthentik.io) **2026.8.3** where the apps are OpenID Connect clients. One account per person, one group per app, no public sign-up.
 
 Everything is configuration: the image `docker.io/injust/mossyleaf-accounts` is Authentik's official image with this repository's blueprints, email templates and branding copied in. The blueprints declare the groups, OIDC providers, applications, access bindings, flows and brand, so a fresh install is ready on its first start, and updating the server is pulling a newer tag.
 
@@ -10,22 +10,35 @@ Everything is configuration: the image `docker.io/injust/mossyleaf-accounts` is 
 | `compose.yaml` | Local stack: the image built from the Dockerfile as Authentik server (http://localhost:9000) + worker, PostgreSQL 18, Mailpit (http://localhost:8027) |
 | `compose.override.yaml` | Local only: mounts `blueprints/`, `templates/` and `branding/` over the image's copies, so edits need no rebuild |
 | `.github/workflows/ci.yml` | On every push: builds the image, starts it on a fresh stack, runs `make check`, keeps the sign-in screenshots; on `main` it then publishes the tested image to Docker Hub |
-| `blueprints/mossyleaf-accounts.yaml` | Sign-in, recovery and password-change flows, invitation email, password policy, brand |
+| `blueprints/mossyleaf-accounts.yaml` | Sign-in, recovery and password-change flows, invitation and recovery emails per context, password policy, the three brands |
 | `blueprints/mossyleaf-apps.yaml` | Groups `mossydew` / `mossytrunk`, their OIDC providers and applications, group bindings, `zoneinfo` and `mossytrunk_workspace` claims |
-| `branding/` | Logo, favicon, background, `branding.css` (the brand's custom CSS) and self-hosted fonts, served at `/static/dist/custom/` |
-| `templates/email/` | Invitation and password-reset emails (HTML + text, French or English from the user's locale) |
+| `branding/` | mossyleaf's logo, favicon, background, `branding.css` (the brand's custom CSS) and self-hosted fonts, served at `/static/dist/custom/`; `injust/` and `personal/` hold the other two brands |
+| `templates/email/` | Invitation and password-reset emails per context, `mossyleaf-*`, `injust-*`, `personal-*` (HTML + text, French or English from the user's locale) |
 | `scripts/invite.py` | Creates or updates a user, adds groups and emails the invitation (run by `make invite`) |
 | `deploy/` | Server compose file, `.env.dist` and the [server README](deploy/README.md) |
+
+## Contexts
+
+| Context | Domain | Apps (groups) | Look | Email sender |
+|---|---|---|---|---|
+| `mossyleaf` (default brand) | `accounts.mossyleaf.studio` | MossyDew, MossyTrunk, mossyleaf.studio admin | herbarium sheet on moss | `AUTHENTIK_EMAIL__FROM` |
+| `injust` | `accounts.injustmusic.com` | Injust | black, red, Anton | `INJUST_EMAIL_FROM` |
+| `personal` | `accounts.duprat.cloud` | muhmeal | light, slate blue | `PERSONAL_EMAIL_FROM` |
+
+One Authentik, one user pool: a context is a brand (domain, logo, CSS, emails) chosen from the request's host. Sessions are per domain, so signing in on one context does not sign you in on another. The flows are shared; the recovery flow picks its email stage from the brand's `context` attribute (evaluated at run time: Authentik caches one plan per flow, whatever the host). An app belongs to a context by the domain it points at: its issuer and endpoints follow the host, and `sub` is the same on every domain. A user's dashboard lists every app their groups allow, whichever domain it is opened on.
+
+Locally the brands answer on `localhost:9000`, `injust.localhost:9000` and `personal.localhost:9000` (`*_ACCOUNTS_DOMAIN` in `compose.yaml`).
 
 ## Local use
 
 ```bash
 make up                 # build the image, http://localhost:9000, admin: akadmin / admin-password
 make invite EMAIL=ada@example.com NAME="Ada Lovelace" GROUPS="mossydew mossytrunk"
+make invite CONTEXT=injust EMAIL=ada@example.com NAME="Ada Lovelace"   # injust brand, group injust
 open http://localhost:8027   # Mailpit: the invitation link
 make apply              # reapply the blueprints now (needed after editing branding/branding.css)
-make check              # smoke test: blueprints applied, OpenID configurations, sign-in page, brand
-make shots              # sign-in page screenshots (phone + desktop) into shots/
+make check              # smoke test: blueprints applied, OpenID configurations, sign-in page, the three brands, recovery by email
+make shots              # sign-in page screenshots (phone + desktop, plus injust and personal) into shots/
 make logs / make down
 ```
 
@@ -43,7 +56,7 @@ Local client secrets: `mossydew-local-secret` and `mossytrunk-local-secret` (ove
 | Post-logout redirect URIs (strict) | `https://mossydew.mossyleaf.studio/`, `http://localhost:8090/` | `https://mossytrunk.mossyleaf.studio/`, `http://localhost:8080/` | `$MUHMEAL_URL/` | `$INJUST_URL/` |
 | Group allowed to sign in | `mossydew` | `mossytrunk` | `muhmeal` | `injust` |
 
-Endpoints (`<slug>` = `mossydew` or `mossytrunk`; locally `http://localhost:9000` instead of the host):
+Endpoints (`<slug>` = the `client_id`; host = the app's context domain, `accounts.mossyleaf.studio` below, `accounts.injustmusic.com` for injust, `accounts.duprat.cloud` for muhmeal; locally `http://localhost:9000`, `http://injust.localhost:9000`, `http://personal.localhost:9000`):
 
 - Discovery: `https://accounts.mossyleaf.studio/application/o/<slug>/.well-known/openid-configuration`
 - Issuer: `https://accounts.mossyleaf.studio/application/o/<slug>/`
@@ -90,6 +103,8 @@ Logout (RP-initiated): redirect the browser to `/application/o/<slug>/end-sessio
 
 `branding.css` maps the mossyleaf tokens (accent `#5b7f3a`, paper `#f7f8f1` sheet on a `#1e2f17` moss ground, Patua One for titles, Inter for text) onto Authentik's PatternFly variables: the form is a herbarium sheet held by two strips of tape, centered on the page. Authentik injects the brand CSS into the page and into every web component, so plain selectors such as `.pf-c-login__main` work; rules that compete with Authentik's own scoped rules use `:not(#_)` to win on specificity. The theme is pinned to light. `logo.svg` is a hand-drawn leaf with the wordmark converted to outlines from Patua One; `favicon.svg` is the leaf; `background.svg` is a moss-green glow with pressed leaf and fern silhouettes.
 
+`branding/injust/` follows the Injust site (ground `#0b0d10`, red `#d4202a`, square corners, Anton titles, Archivo text, dark theme); `branding/personal/` is a plain light card (slate blue `#2f5d8a`, Inter). Their logos are outlined text too.
+
 The sign-in, recovery and password-change flows run in Authentik's compatibility mode (light DOM instead of shadow DOM) so password managers can fill and save the username and password fields.
 
 ### Third-party assets
@@ -98,6 +113,8 @@ The sign-in, recovery and password-change flows run in Authentik's compatibility
 |---|---|
 | Patua One (LatinoType), `branding/fonts/patua-one-*.woff2`, also outlined in `logo.svg` | SIL Open Font License 1.1, `branding/fonts/LICENSE-patua-one.txt` (via `@fontsource/patua-one` 5.3.0) |
 | Inter (The Inter Project Authors), `branding/fonts/inter-*.woff2` | SIL Open Font License 1.1, `branding/fonts/LICENSE-inter.txt` (via `@fontsource-variable/inter` 5.3.0) |
+| Anton (The Anton Project Authors), `branding/injust/fonts/anton-*.woff2`, also outlined in `injust/logo.svg` | SIL Open Font License 1.1, `branding/injust/fonts/LICENSE-anton.txt` (via `@fontsource/anton` 5.3.0) |
+| Archivo (The Archivo Project Authors), `branding/injust/fonts/archivo-*.woff2` | SIL Open Font License 1.1, `branding/injust/fonts/LICENSE-archivo.txt` (via `@fontsource-variable/archivo` 5.3.0) |
 | Authentik `ghcr.io/goauthentik/server` (base of the image) | MIT (open-source edition; no enterprise features used) |
 | PostgreSQL `postgres:18-alpine` | PostgreSQL License |
 | Mailpit `axllent/mailpit` (local only) | MIT |

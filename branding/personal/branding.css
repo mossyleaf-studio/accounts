@@ -1,0 +1,174 @@
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/dist/custom/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/dist/custom/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root,
+:host {
+  --dc-ground: #e9edf2;
+  --dc-card: #ffffff;
+  --dc-text: #16181d;
+  --dc-muted: #5d6470;
+  --dc-border: #d3d8e0;
+  --dc-accent: #2f5d8a;
+  --dc-accent-strong: #244a6e;
+  --dc-accent-soft: #dbe6f1;
+  --dc-radius: 0.5rem;
+
+  --ak-accent: var(--dc-accent);
+  --ak-global--BackgroundContrastFilter: none;
+  --ak-generic-sans-serif: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ak-font-family-sans-serif: var(--ak-generic-sans-serif);
+  --pf-global--FontFamily--sans-serif: var(--ak-generic-sans-serif);
+  --pf-global--primary-color--100: var(--dc-accent);
+  --pf-global--primary-color--200: var(--dc-accent-strong);
+  --pf-global--active-color--100: var(--dc-accent);
+  --pf-global--link--Color: var(--dc-accent);
+  --pf-global--link--Color--hover: var(--dc-accent-strong);
+  --pf-global--BorderRadius--sm: var(--dc-radius);
+  --pf-global--BorderColor--100: var(--dc-border);
+  --pf-global--Color--100: var(--dc-text);
+  --pf-global--Color--200: var(--dc-muted);
+  --pf-global--Color--dark-100: var(--dc-text);
+  --pf-global--Color--dark-200: var(--dc-muted);
+  --pf-c-button--BorderRadius: var(--dc-radius);
+  --pf-c-form-control--BorderRadius: var(--dc-radius);
+  --pf-c-button--m-primary--BackgroundColor: var(--dc-accent);
+  --pf-c-button--m-primary--hover--BackgroundColor: var(--dc-accent-strong);
+  --pf-c-button--m-primary--focus--BackgroundColor: var(--dc-accent-strong);
+  --pf-c-check__input--accent-color: var(--dc-accent);
+}
+
+/* `:not(#_)` lifts specificity above Authentik's scoped `.pf-c-login.ak-flow-executor` rules. */
+
+html body {
+  background: var(--dc-ground);
+}
+
+.pf-c-login:not(#_) {
+  --ak-c-login__main--BackgroundColor: var(--dc-card);
+  --ak-c-login__main--Color: var(--dc-text);
+  --ak-c-login__main--BoxShadow: 0 0.0625rem 0.125rem rgb(22 24 29 / 8%), 0 0.75rem 2rem -0.5rem rgb(22 24 29 / 18%);
+  --ak-c-login__footer--Color: var(--dc-muted);
+  --ak-c-login--MaxWidth: 26rem;
+  --ak-c-login--BackgroundColorOverlay: transparent;
+  --pf-c-login--xl--BackgroundImage: none;
+  background: transparent;
+  grid-template-rows: [header] minmax(4.5rem, 1fr) [main] auto [footer] minmax(4.5rem, 1fr);
+}
+
+.pf-c-login__main:not(#_) {
+  justify-self: center;
+  align-self: center;
+  width: min(26rem, 100% - 2rem);
+  max-width: 26rem;
+  margin-block: 1.5rem;
+  color: var(--dc-text);
+  border: 0.0625rem solid var(--dc-border);
+  border-radius: 0.75rem;
+}
+
+.pf-c-login__main-header.pf-c-brand {
+  padding-top: 2.5rem;
+}
+
+.pf-c-login__main-header.pf-c-brand img,
+.pf-c-brand img {
+  max-height: 2.25rem;
+}
+
+.pf-c-login__main-header .pf-c-title,
+.pf-c-login__main-header h1,
+.pf-c-title.pf-m-2xl,
+.pf-c-title.pf-m-3xl {
+  font-weight: 650;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--dc-text);
+}
+
+.pf-c-form__label,
+.pf-c-form__label-text {
+  color: var(--dc-text);
+  font-weight: 600;
+}
+
+.pf-c-form-control:not(#_) {
+  background-color: var(--dc-card);
+  color: var(--dc-text);
+  border: 0.0625rem solid var(--dc-border);
+  border-radius: var(--dc-radius);
+  min-height: 2.5rem;
+}
+
+.pf-c-form-control:not(#_)::placeholder {
+  color: #8a909b;
+  font-style: normal;
+}
+
+.pf-c-form-control:not(#_):hover {
+  border-color: var(--dc-muted);
+}
+
+.pf-c-form-control:not(#_):focus {
+  border-color: var(--dc-accent);
+  box-shadow: 0 0 0 0.1875rem var(--dc-accent-soft);
+  outline: none;
+}
+
+.pf-c-button {
+  border-radius: var(--dc-radius);
+}
+
+.pf-c-button.pf-m-primary {
+  min-height: 2.75rem;
+  background-color: var(--dc-accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pf-c-button.pf-m-primary:hover,
+.pf-c-button.pf-m-primary:focus {
+  background-color: var(--dc-accent-strong);
+}
+
+.pf-c-button.pf-m-primary:focus-visible {
+  outline: 0.125rem solid var(--dc-accent-strong);
+  outline-offset: 0.125rem;
+}
+
+a,
+.pf-c-button.pf-m-link {
+  color: var(--dc-accent);
+}
+
+.pf-c-login__main-footer-band {
+  border-top: 0.0625rem solid var(--dc-border);
+  background: transparent;
+}
+
+ak-locale-select:not(#_) {
+  --ak-c-flow-executor__locale-select--Color: var(--dc-muted);
+  color: var(--dc-muted);
+}
+
+.pf-c-login__footer:not(#_),
+.pf-c-login__footer:not(#_) a,
+ak-brand-links:not(#_) a,
+ak-brand-links:not(#_) li {
+  color: var(--dc-muted);
+}

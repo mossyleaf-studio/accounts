@@ -3,6 +3,7 @@ import sys
 
 from rest_framework.test import APIClient
 
+from authentik.brands.models import Brand
 from authentik.core.models import Group, User
 from authentik.stages.email.models import EmailStage
 
@@ -12,9 +13,14 @@ group_names = os.environ.get("INVITE_GROUPS", "").split()
 timezone = os.environ.get("INVITE_TIMEZONE", "").strip()
 locale = os.environ.get("INVITE_LOCALE", "").strip()
 workspace = os.environ.get("INVITE_WORKSPACE", "").strip()
-host = os.environ["INVITE_HOST"]
+context = os.environ.get("INVITE_CONTEXT", "").strip() or "mossyleaf"
 secure = os.environ.get("INVITE_SECURE", "") == "1"
 duration = os.environ.get("INVITE_DURATION", "days=7")
+
+# The link and the email follow the context's brand: its domain, look and sender.
+brand = Brand.objects.filter(attributes__context=context).first()
+if brand is None:
+    sys.exit(f"Unknown context: {context}")
 
 groups = []
 for group_name in group_names:
@@ -49,17 +55,17 @@ if user.attributes.get("mossytrunk_workspace"):
 admin = User.objects.filter(is_active=True, groups__is_superuser=True).first()
 if admin is None:
     sys.exit("No active superuser to send the invitation as")
-stage = EmailStage.objects.get(name="mossyleaf-invitation-email")
+stage = EmailStage.objects.get(name=f"{context}-invitation-email")
 client = APIClient()
 client.force_authenticate(admin)
 response = client.post(
     f"/api/v3/core/users/{user.pk}/recovery_email/",
     {"email_stage": str(stage.pk), "token_duration": duration},
     format="json",
-    HTTP_HOST=host,
+    HTTP_HOST=brand.domain,
     HTTP_ACCEPT_LANGUAGE=user.attributes.get("settings", {}).get("locale") or "en",
     secure=secure,
 )
 if response.status_code != 204:
     sys.exit(f"Sending failed ({response.status_code}): {response.content.decode()}")
-print(f"Invitation sent to {email} (valid {duration})")
+print(f"{brand.branding_title} invitation sent to {email} (valid {duration})")

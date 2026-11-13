@@ -135,6 +135,74 @@ entries:
       token_expiry: days=7
       activate_user_on_success: true
 
+  # injust and personal send from their own address: the global settings only have one sender.
+  - model: authentik_stages_email.emailstage
+    id: injust-recovery-email
+    identifiers:
+      name: injust-recovery-email
+    attrs: &own-smtp
+      use_global_settings: false
+      host: !Env [AUTHENTIK_EMAIL__HOST, localhost]
+      port: !Env [AUTHENTIK_EMAIL__PORT, 25]
+      username: !Env [AUTHENTIK_EMAIL__USERNAME, ""]
+      password: !Env [AUTHENTIK_EMAIL__PASSWORD, ""]
+      use_tls: !Env [AUTHENTIK_EMAIL__USE_TLS, false]
+      use_ssl: !Env [AUTHENTIK_EMAIL__USE_SSL, false]
+      from_address: !Env [INJUST_EMAIL_FROM, accounts@injustmusic.com]
+      subject: Nouveau mot de passe Injust · Reset your Injust password
+      template: email/injust-password-reset.html
+      token_expiry: minutes=30
+      activate_user_on_success: true
+  - model: authentik_stages_email.emailstage
+    id: injust-invitation-email
+    identifiers:
+      name: injust-invitation-email
+    attrs:
+      <<: *own-smtp
+      subject: Votre compte Injust · Your Injust account
+      template: email/injust-invitation.html
+      token_expiry: days=7
+  - model: authentik_stages_email.emailstage
+    id: personal-recovery-email
+    identifiers:
+      name: personal-recovery-email
+    attrs:
+      <<: *own-smtp
+      from_address: !Env [PERSONAL_EMAIL_FROM, accounts@duprat.cloud]
+      subject: Nouveau mot de passe duprat.cloud · Reset your duprat.cloud password
+      template: email/personal-password-reset.html
+  - model: authentik_stages_email.emailstage
+    id: personal-invitation-email
+    identifiers:
+      name: personal-invitation-email
+    attrs:
+      <<: *own-smtp
+      from_address: !Env [PERSONAL_EMAIL_FROM, accounts@duprat.cloud]
+      subject: Votre compte duprat.cloud · Your duprat.cloud account
+      template: email/personal-invitation.html
+      token_expiry: days=7
+
+  # One brand per context; a flow step meant for one context is gated on the brand's `context` attribute.
+  - model: authentik_policies_expression.expressionpolicy
+    id: brand-mossyleaf
+    identifiers:
+      name: brand-is-mossyleaf
+    attrs:
+      # Fallback for any other brand too, so recovery always sends an email.
+      expression: return request.http_request.brand.attributes.get("context") not in ("injust", "personal")
+  - model: authentik_policies_expression.expressionpolicy
+    id: brand-injust
+    identifiers:
+      name: brand-is-injust
+    attrs:
+      expression: return request.http_request.brand.attributes.get("context") == "injust"
+  - model: authentik_policies_expression.expressionpolicy
+    id: brand-personal
+    identifiers:
+      name: brand-is-personal
+    attrs:
+      expression: return request.http_request.brand.attributes.get("context") == "personal"
+
   - model: authentik_stages_identification.identificationstage
     id: recovery-identification
     identifiers:
@@ -170,14 +238,49 @@ entries:
     attrs:
       evaluate_on_plan: true
       re_evaluate_policies: true
+  # Gated at run time only: the planner caches one plan per flow and user, whatever the brand.
   - model: authentik_flows.flowstagebinding
+    id: recovery-email-mossyleaf-binding
     identifiers:
       target: !KeyOf recovery-flow
       stage: !KeyOf recovery-email
       order: 20
     attrs:
-      evaluate_on_plan: true
+      evaluate_on_plan: false
       re_evaluate_policies: true
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf recovery-email-mossyleaf-binding
+      policy: !KeyOf brand-mossyleaf
+      order: 0
+  - model: authentik_flows.flowstagebinding
+    id: recovery-email-injust-binding
+    identifiers:
+      target: !KeyOf recovery-flow
+      stage: !KeyOf injust-recovery-email
+      order: 21
+    attrs:
+      evaluate_on_plan: false
+      re_evaluate_policies: true
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf recovery-email-injust-binding
+      policy: !KeyOf brand-injust
+      order: 0
+  - model: authentik_flows.flowstagebinding
+    id: recovery-email-personal-binding
+    identifiers:
+      target: !KeyOf recovery-flow
+      stage: !KeyOf personal-recovery-email
+      order: 22
+    attrs:
+      evaluate_on_plan: false
+      re_evaluate_policies: true
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf recovery-email-personal-binding
+      policy: !KeyOf brand-personal
+      order: 0
   - model: authentik_flows.flowstagebinding
     identifiers:
       target: !KeyOf recovery-flow
@@ -251,7 +354,7 @@ entries:
       slug: mossyleaf-authentication
     attrs:
       name: mossyleaf - Sign in
-      title: Sign in to mossyleaf
+      title: Sign in
       designation: authentication
       authentication: none
       compatibility_mode: true
@@ -285,7 +388,7 @@ entries:
     identifiers:
       default: true
     attrs:
-      domain: accounts.mossyleaf.studio
+      domain: !Env [MOSSYLEAF_ACCOUNTS_DOMAIN, accounts.mossyleaf.studio]
       branding_title: mossyleaf
       branding_logo: /static/dist/custom/logo.svg
       branding_favicon: /static/dist/custom/favicon.svg
@@ -297,6 +400,47 @@ entries:
       flow_user_settings: !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
       flow_unenrollment: null
       attributes:
+        context: mossyleaf
+        settings:
+          theme:
+            base: light
+
+  - model: authentik_brands.brand
+    identifiers:
+      domain: !Env [INJUST_ACCOUNTS_DOMAIN, accounts.injustmusic.com]
+    attrs:
+      branding_title: Injust
+      branding_logo: /static/dist/custom/injust/logo.svg
+      branding_favicon: /static/dist/custom/injust/favicon.svg
+      branding_default_flow_background: /static/dist/custom/injust/background.svg
+      branding_custom_css: !File [/web/dist/custom/injust/branding.css, ""]
+      flow_authentication: !KeyOf authentication-flow
+      flow_recovery: !KeyOf recovery-flow
+      flow_invalidation: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      flow_user_settings: !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
+      flow_unenrollment: null
+      attributes:
+        context: injust
+        settings:
+          theme:
+            base: dark
+
+  - model: authentik_brands.brand
+    identifiers:
+      domain: !Env [PERSONAL_ACCOUNTS_DOMAIN, accounts.duprat.cloud]
+    attrs:
+      branding_title: duprat.cloud
+      branding_logo: /static/dist/custom/personal/logo.svg
+      branding_favicon: /static/dist/custom/personal/favicon.svg
+      branding_default_flow_background: /static/dist/custom/personal/background.svg
+      branding_custom_css: !File [/web/dist/custom/personal/branding.css, ""]
+      flow_authentication: !KeyOf authentication-flow
+      flow_recovery: !KeyOf recovery-flow
+      flow_invalidation: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      flow_user_settings: !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
+      flow_unenrollment: null
+      attributes:
+        context: personal
         settings:
           theme:
             base: light

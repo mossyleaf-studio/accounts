@@ -1,0 +1,15 @@
+{% load i18n %}{% get_current_language as language %}{% if language|slice:':2' == 'fr' %}Bienvenue, {{ user.name }}
+
+Un compte Injust vient d'être créé pour vous. Il vous connecte à l'administration du site Injust. Choisissez votre mot de passe pour l'activer :
+
+{{ url }}
+
+Ce lien est valable {{ expires|timeuntil }}. Vous n'attendiez pas ce message ? Ignorez-le.
+{% else %}Welcome, {{ user.name }}
+
+An Injust account has just been created for you. It signs you in to the Injust site admin. Choose your password to activate it:
+
+{{ url }}
+
+This link is valid for {{ expires|timeuntil }}. Not expecting this email? Just ignore it.
+{% endif %}

@@ -12,13 +12,19 @@ BLUEPRINTS = custom/mossyleaf-accounts.yaml custom/mossyleaf-apps.yaml
 
 EMAIL ?=
 NAME ?=
-GROUPS ?= mossydew mossytrunk
+CONTEXT ?= mossyleaf
+GROUPS_mossyleaf = mossydew mossytrunk
+GROUPS_injust = injust
+GROUPS_personal = muhmeal
+GROUPS ?= $(GROUPS_$(CONTEXT))
 TIMEZONE ?= Europe/Paris
 LOCALE ?= fr
 DURATION ?= days=7
-INVITE_ENV = -e INVITE_EMAIL='$(EMAIL)' -e INVITE_NAME='$(NAME)' -e INVITE_GROUPS='$(GROUPS)' -e INVITE_TIMEZONE='$(TIMEZONE)' -e INVITE_LOCALE='$(LOCALE)' -e INVITE_DURATION='$(DURATION)' -e INVITE_WORKSPACE='$(WORKSPACE)'
+INVITE_ENV = -e INVITE_CONTEXT='$(CONTEXT)' -e INVITE_EMAIL='$(EMAIL)' -e INVITE_NAME='$(NAME)' -e INVITE_GROUPS='$(GROUPS)' -e INVITE_TIMEZONE='$(TIMEZONE)' -e INVITE_LOCALE='$(LOCALE)' -e INVITE_DURATION='$(DURATION)' -e INVITE_WORKSPACE='$(WORKSPACE)'
 
 SHOT = $(DC) run --rm --no-deps playwright npx -y playwright@1.63.0 screenshot --wait-for-timeout=4000
+# Chromium resolves *.localhost itself: send it through the server as a proxy to reach the other brands.
+BRAND_SHOT = $(SHOT) --proxy-server=http://server:9000 --proxy-bypass='<-loopback>'
 
 .PHONY: up down logs ps apply check invite shots image push deploy-files deploy
 
@@ -40,18 +46,20 @@ apply: ## Re-apply the custom blueprints now (e.g. after editing branding/brandi
 check: ## Smoke test the running stack: blueprints applied, OpenID configurations, sign-in page, brand (CI runs it on a fresh stack)
 	./scripts/check.sh
 
-invite: ## make invite EMAIL=a@b.c NAME="Ada" [GROUPS="mossydew mossytrunk"] [WORKSPACE="Atelier Mousse"] [REMOTE=1]
+invite: ## make invite EMAIL=a@b.c NAME="Ada" [CONTEXT=mossyleaf|injust|personal] [GROUPS="mossydew mossytrunk"] [WORKSPACE="Atelier Mousse"] [REMOTE=1]
 	@test -n "$(EMAIL)" || (echo "EMAIL is required" && exit 1)
 ifeq ($(REMOTE),1)
-	ssh $(DEPLOY_HOST) "cd $(DEPLOY_DIR) && $(REMOTE_DOCKER) compose exec -T $(INVITE_ENV) -e INVITE_HOST=accounts.mossyleaf.studio -e INVITE_SECURE=1 worker ak shell" < scripts/invite.py
+	ssh $(DEPLOY_HOST) "cd $(DEPLOY_DIR) && $(REMOTE_DOCKER) compose exec -T $(INVITE_ENV) -e INVITE_SECURE=1 worker ak shell" < scripts/invite.py
 else
-	$(DC) exec -T $(INVITE_ENV) -e INVITE_HOST=localhost:9000 worker ak shell < scripts/invite.py
+	$(DC) exec -T $(INVITE_ENV) worker ak shell < scripts/invite.py
 endif
 
-shots: ## Screenshot the sign-in page at phone and desktop widths into shots/
+shots: ## Screenshot the sign-in page at phone and desktop widths, and the other brands at phone width, into shots/
 	mkdir -p shots
 	$(SHOT) --viewport-size=390,844 http://server:9000/if/flow/mossyleaf-authentication/ shots/login-phone.png
 	$(SHOT) --viewport-size=1440,900 http://server:9000/if/flow/mossyleaf-authentication/ shots/login-desktop.png
+	$(BRAND_SHOT) --viewport-size=390,844 http://injust.localhost:9000/if/flow/mossyleaf-authentication/ shots/login-injust-phone.png
+	$(BRAND_SHOT) --viewport-size=390,844 http://personal.localhost:9000/if/flow/mossyleaf-authentication/ shots/login-personal-phone.png
 
 image: ## Build the production image locally (IMAGE, TAG, PLATFORM)
 	docker buildx build --platform $(PLATFORM) -t $(IMAGE):$(TAG) -t $(IMAGE):latest --load .
